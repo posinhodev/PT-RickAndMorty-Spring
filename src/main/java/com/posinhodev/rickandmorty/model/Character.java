@@ -14,10 +14,7 @@ import javax.persistence.*;
 @Table(name = "character")
 public class Character {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private Integer characterId;
+    private Integer Id;
     private String name;
     private String status;
     private String gender;

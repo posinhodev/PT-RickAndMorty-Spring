@@ -16,7 +16,14 @@ import org.springframework.web.client.RestTemplate;
 
 import java.awt.print.Pageable;
 import java.util.List;
+import java.util.Optional;
 
+/**
+ * Implementation of the service with the business logic to manage
+ * the data of the Rick and Morty API
+ * @author posinhodev
+ * @version 1.0
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -52,6 +59,27 @@ public class CharacterServiceImpl implements CharacterService {
         return response.getBody();
     }
 
+    @Override
+    public Page<Character> findAll(int page, int pageSize) {
+        PageRequest pageRequest = PageRequest.of(page, pageSize);
+        log.info("INFO: FETCHING CHARACTERS - PAGE {}, PAGE SIZE {}", page, pageSize);
+        return characterRepository.findAll(pageRequest);
+    }
+
+    @Override
+    public ResponseEntity<String> create(Character character) {
+        Optional<Character> existingCharacter = characterRepository.findByName(character.getName());
+
+        if (existingCharacter.isPresent()) {
+            log.info("INFO: Character with name {} already exists in the database. Not saving again.", character.getName());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Character already exists");
+        } else {
+            characterRepository.save(character);
+            log.info("INFO: Saved character with name {}", character.getName());
+            return ResponseEntity.ok("Character saved successfully");
+        }
+    }
+
     private void saveCharactersToDatabase(List<Result> characters) {
         for (Result result : characters) {
             if (!characterRepository.existsByName(result.getName())) {
@@ -67,12 +95,5 @@ public class CharacterServiceImpl implements CharacterService {
                 log.error("ERROR: Character with name {} already exists in the database", result.getName());
             }
         }
-    }
-
-    @Override
-    public Page<Character> findAll(int page, int pageSize) {
-        PageRequest pageRequest = PageRequest.of(page, pageSize);
-        log.info("INFO: FETCHING CHARACTERS - PAGE {}, PAGE SIZE {}", page, pageSize);
-        return characterRepository.findAll(pageRequest);
     }
 }

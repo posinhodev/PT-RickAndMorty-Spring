@@ -7,6 +7,11 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 
+/**
+ * entity to store the characters obtained from the api
+ * @author posinhodev
+ * @version 1.0
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

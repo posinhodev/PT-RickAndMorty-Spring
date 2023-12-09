@@ -12,9 +12,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.awt.print.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,6 +40,10 @@ public class CharacterServiceImpl implements CharacterService {
 
     private static final String CHARACTER_API = "https://rickandmortyapi.com/api/character";
 
+    /**
+     * Method to consume data from the API and handling errors
+     * @return information obtained from the API
+     */
     @Override
     public DataCharacters getAllCharacter() {
         if (httpHeaders == null) {
@@ -49,16 +53,39 @@ public class CharacterServiceImpl implements CharacterService {
 
         HttpEntity<String> entity = new HttpEntity<>(httpHeaders);
 
-        ResponseEntity<DataCharacters> response = restTemplate.exchange(CHARACTER_API, HttpMethod.GET,
-                entity, DataCharacters.class);
+        try {
+            ResponseEntity<DataCharacters> response = restTemplate.exchange(
+                    CHARACTER_API,
+                    HttpMethod.GET,
+                    entity,
+                    DataCharacters.class);
 
-        log.info("INFO: FETCHING ALL CHARACTERS");
+            log.info("INFO: FETCHING CHARACTERS");
 
-        saveCharactersToDatabase(response.getBody().getResults());
+            DataCharacters dataCharacters = response.getBody();
 
-        return response.getBody();
+            if (dataCharacters != null) {
+                saveCharactersToDatabase(dataCharacters.getResults());
+                return dataCharacters;
+            } else {
+                log.error("ERROR: Response body is null while fetching characters from the external API");
+                throw new RuntimeException("Response body is null while fetching characters from the external API");
+            }
+        } catch (HttpClientErrorException e) {
+            log.error("ERROR: fetching characters from the external API: {}", e.getMessage());
+            throw new RuntimeException("Error fetching characters from the external API", e);
+        } catch (Exception e) {
+            log.error("ERROR: Unexpected error fetching characters from the external API: {}", e.getMessage());
+            throw new RuntimeException("Unexpected error fetching characters from the external API", e);
+        }
     }
 
+    /**
+     * Method to list all the characters found in the database with pagination
+     * @param page page on which you want to be located
+     * @param pageSize number of records to bring per page
+     * @return characters with paginated
+     */
     @Override
     public Page<Character> findAll(int page, int pageSize) {
         PageRequest pageRequest = PageRequest.of(page, pageSize);
@@ -66,12 +93,17 @@ public class CharacterServiceImpl implements CharacterService {
         return characterRepository.findAll(pageRequest);
     }
 
+    /**
+     * Method to create a new character in the database
+     * @param character character information that will be saved in the database
+     * @return message informing whether the character was saved or not
+     */
     @Override
     public ResponseEntity<String> create(Character character) {
         Optional<Character> existingCharacter = characterRepository.findByName(character.getName());
 
         if (existingCharacter.isPresent()) {
-            log.info("INFO: Character with name {} already exists in the database. Not saving again.", character.getName());
+            log.error("ERROR: Character with name {} already exists in the database. Not saving again.", character.getName());
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Character already exists");
         } else {
             characterRepository.save(character);
@@ -80,6 +112,10 @@ public class CharacterServiceImpl implements CharacterService {
         }
     }
 
+    /**
+     * Method to store the information obtained from the API in the database
+     * @param characters api character information to save them in the database
+     */
     private void saveCharactersToDatabase(List<Result> characters) {
         for (Result result : characters) {
             if (!characterRepository.existsByName(result.getName())) {

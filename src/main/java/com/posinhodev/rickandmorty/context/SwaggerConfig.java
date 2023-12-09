@@ -18,7 +18,7 @@ public class SwaggerConfig {
 
     /**
      * Bean to configure the swagger
-     * @return
+     * @return information about which drivers will be seen in the swagger
      */
     @Bean
     public Docket api() {
@@ -32,7 +32,7 @@ public class SwaggerConfig {
 
     /**
      * Information that will be shown in the swagger-ui to the users who view it
-     * @return
+     * @return project information for display in the swagger
      */
     private ApiInfo apiInfo() {
         return new ApiInfo(
